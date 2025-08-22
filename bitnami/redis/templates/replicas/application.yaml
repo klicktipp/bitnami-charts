@@ -30,7 +30,7 @@ spec:
   {{- if .Values.replica.updateStrategy }}
   updateStrategy: {{- toYaml .Values.replica.updateStrategy | nindent 4 }}
   {{- end }}
-  {{- if .Values.replica.minReadySeconds }}
+  {{- if and .Values.replica.minReadySeconds (semverCompare ">= 1.23-0" (include "common.capabilities.kubeVersion" .)) }}
   minReadySeconds: {{ .Values.replica.minReadySeconds }}
   {{- end }}
   {{- if .Values.replica.podManagementPolicy }}
@@ -133,7 +133,7 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" .Values.replica.args "context" $) | nindent 12 }}
           {{- else }}
           args:
-            - -ec
+            - -c
             - /opt/bitnami/scripts/start-scripts/start-replica.sh
           {{- end }}
           env:
@@ -235,9 +235,9 @@ spec:
             failureThreshold: {{ .Values.replica.livenessProbe.failureThreshold }}
             exec:
               command:
-                - /bin/bash
-                - -ec
-                - "/health/ping_liveness_local_and_master.sh {{ .Values.replica.livenessProbe.timeoutSeconds }}"
+                - sh
+                - -c
+                - /health/ping_liveness_local_and_master.sh {{ .Values.replica.livenessProbe.timeoutSeconds }}
           {{- end }}
           {{- if .Values.replica.customReadinessProbe }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.replica.customReadinessProbe "context" $) | nindent 12 }}
@@ -250,9 +250,9 @@ spec:
             failureThreshold: {{ .Values.replica.readinessProbe.failureThreshold }}
             exec:
               command:
-                - /bin/bash
-                - -ec
-                - "/health/ping_readiness_local_and_master.sh {{ .Values.replica.readinessProbe.timeoutSeconds }}"
+                - sh
+                - -c
+                - /health/ping_readiness_local_and_master.sh {{ .Values.replica.readinessProbe.timeoutSeconds }}
           {{- end }}
           {{- end }}
           {{- if .Values.replica.resources }}
@@ -265,7 +265,7 @@ spec:
               mountPath: /opt/bitnami/scripts/start-scripts
             - name: health
               mountPath: /health
-            {{- if and .Values.auth.enabled .Values.auth.usePasswordFiles }}
+            {{- if .Values.auth.usePasswordFiles }}
             - name: redis-password
               mountPath: /opt/bitnami/redis/secrets/
             {{- end }}
@@ -278,14 +278,12 @@ spec:
               {{- end }}
             - name: config
               mountPath: /opt/bitnami/redis/mounted-etc
-            {{- if and .Values.replica.containerSecurityContext.enabled .Values.replica.containerSecurityContext.readOnlyRootFilesystem }}
             - name: empty-dir
               mountPath: /opt/bitnami/redis/etc
               subPath: app-conf-dir
             - name: empty-dir
               mountPath: /tmp
               subPath: tmp-dir
-            {{- end }}
             {{- if .Values.tls.enabled }}
             - name: redis-certificates
               mountPath: /opt/bitnami/redis/certs
@@ -308,11 +306,11 @@ spec:
           {{- else }}
           command:
             - /bin/bash
-            - -ec
+            - -c
             - |
-              {{- if and .Values.auth.enabled .Values.auth.usePasswordFiles }}
-              export REDIS_PASSWORD="$(< $REDIS_PASSWORD_FILE)"
-              {{- end }}
+              if [[ -f '/secrets/redis-password' ]]; then
+              export REDIS_PASSWORD=$(cat /secrets/redis-password)
+              fi
               redis_exporter{{- range $key, $value := .Values.metrics.extraArgs }} --{{ $key }}={{ $value }}{{- end }}
           {{- end }}
           {{- if .Values.diagnosticMode.enabled }}
@@ -326,10 +324,7 @@ spec:
             {{- if .Values.auth.enabled }}
             - name: REDIS_USER
               value: default
-            {{- if .Values.auth.usePasswordFiles }}
-            - name: REDIS_PASSWORD_FILE
-              value: "/secrets/redis-password"
-            {{- else }}
+            {{- if (not .Values.auth.usePasswordFiles) }}
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -387,12 +382,10 @@ spec:
           resources: {{- include "common.resources.preset" (dict "type" .Values.metrics.resourcesPreset) | nindent 12 }}
           {{- end }}
           volumeMounts:
-            {{- if and .Values.metrics.containerSecurityContext.enabled .Values.metrics.containerSecurityContext.readOnlyRootFilesystem }}
             - name: empty-dir
               mountPath: /tmp
               subPath: tmp-dir
-            {{- end }}
-            {{- if and .Values.auth.enabled .Values.auth.usePasswordFiles }}
+            {{- if .Values.auth.usePasswordFiles }}
             - name: redis-password
               mountPath: /secrets/
             {{- end }}
@@ -442,6 +435,9 @@ spec:
           resources: {{- include "common.resources.preset" (dict "type" .Values.volumePermissions.resourcesPreset) | nindent 12 }}
           {{- end }}
           volumeMounts:
+            - name: empty-dir
+              mountPath: /tmp
+              subPath: tmp-dir
             - name: redis-data
               mountPath: {{ .Values.replica.persistence.path }}
               {{- if .Values.replica.persistence.subPath }}
@@ -467,6 +463,9 @@ spec:
           {{- end }}
           {{- if .Values.sysctl.mountHostSys }}
           volumeMounts:
+            - name: empty-dir
+              mountPath: /tmp
+              subPath: tmp-dir
             - name: host-sys
               mountPath: /host-sys
           {{- end }}
@@ -481,7 +480,7 @@ spec:
           configMap:
             name: {{ printf "%s-health" (include "common.names.fullname" .) }}
             defaultMode: 0755
-        {{- if and .Values.auth.enabled .Values.auth.usePasswordFiles }}
+        {{- if .Values.auth.usePasswordFiles }}
         - name: redis-password
           {{ if .Values.auth.usePasswordFileFromSecret }}
           secret:
@@ -501,7 +500,6 @@ spec:
           hostPath:
             path: /sys
         {{- end }}
-        {{- if or (and .Values.replica.containerSecurityContext.enabled .Values.replica.containerSecurityContext.readOnlyRootFilesystem) (and .Values.metrics.enabled .Values.metrics.containerSecurityContext.enabled .Values.metrics.containerSecurityContext.readOnlyRootFilesystem) }}
         - name: empty-dir
           {{- if or .Values.replica.persistence.medium .Values.replica.persistence.sizeLimit }}
           emptyDir:
@@ -514,7 +512,6 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
-        {{- end }}
         {{- if .Values.tls.enabled }}
         - name: redis-certificates
           secret:
