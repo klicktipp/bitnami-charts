@@ -2248,6 +2248,46 @@ entries:
     urls:
     - keycloak-25.2.0.tgz
     version: 25.2.0
+  - annotations:
+      category: DeveloperTools
+      images: |
+        - name: keycloak
+          image: docker.io/bitnami/keycloak:26.3.1-debian-12-r1
+        - name: keycloak-config-cli
+          image: docker.io/bitnami/keycloak-config-cli:6.4.0-debian-12-r9
+      licenses: Apache-2.0
+      tanzuCategory: application
+    apiVersion: v2
+    appVersion: 26.3.1
+    created: "2025-08-22T10:25:19.130321905Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 16.x.x
+    - name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    description: Keycloak is a high performance Java-based identity and access management
+      solution. It lets developers add an authentication layer to their applications
+      with minimum effort.
+    digest: 41d5248a1443f1ac42abeab76d9f8fc8a8c3f1bb7fc8e9e603fd8ccc3a7d032d
+    home: https://bitnami.com
+    icon: https://dyltqmyl993wv.cloudfront.net/assets/stacks/keycloak/img/keycloak-stack-220x234.png
+    keywords:
+    - keycloak
+    - access-management
+    maintainers:
+    - name: Broadcom, Inc. All Rights Reserved.
+      url: https://github.com/bitnami/charts
+    name: keycloak
+    sources:
+    - https://github.com/bitnami/charts/tree/main/bitnami/keycloak
+    urls:
+    - keycloak-24.7.7.tgz
+    version: 24.7.7
   keydb:
   - annotations:
       category: Database
@@ -5136,4 +5176,4 @@ entries:
     urls:
     - zookeeper-13.8.7.tgz
     version: 13.8.7
-generated: "2025-08-22T10:20:13.495408781Z"
+generated: "2025-08-22T10:25:19.130349327Z"
