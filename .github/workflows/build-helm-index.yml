@@ -1,0 +1,47 @@
+name: Build Helm repo from forked bitnami charts
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "bitnami/**"
+      - ".github/workflows/build-helm-index.yml"
+  workflow_dispatch:
+
+# Needed to push to gh-pages
+permissions:
+  contents: write
+
+concurrency:
+  group: build-helm-index
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      # https://github.com/helm/chart-releaser-action
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.7.0
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        with:
+          charts_dir: bitnami
+          packages_with_index: true    # also push packaged charts into gh-pages
+
+      - name: Print repo URL
+        run: |
+          echo "Helm repo URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
