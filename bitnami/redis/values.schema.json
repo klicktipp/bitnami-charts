@@ -40,8 +40,8 @@
           "type": "string",
           "title": "Workload Kind",
           "form": true,
-          "description": "Allowed values: `Deployment`, `StatefulSet` or `DaemonSet`",
-          "enum": ["Deployment", "StatefulSet", "DaemonSet"]
+          "description": "Allowed values: `Deployment` or `StatefulSet`",
+          "enum": ["Deployment", "StatefulSet"]
         },
         "persistence": {
           "type": "object",
@@ -80,13 +80,6 @@
         "path": "architecture"
       },
       "properties": {
-        "kind": {
-          "type": "string",
-          "title": "Workload Kind",
-          "form": true,
-          "description": "Allowed values: `DaemonSet` or `StatefulSet`",
-          "enum": ["DaemonSet", "StatefulSet"]
-        },
         "replicaCount": {
           "type": "integer",
           "form": true,
