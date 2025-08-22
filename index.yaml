@@ -2742,6 +2742,47 @@ entries:
     urls:
     - mariadb-22.0.0.tgz
     version: 22.0.0
+  - annotations:
+      category: Database
+      images: |
+        - name: mariadb
+          image: docker.io/bitnami/mariadb:11.4.5-debian-12-r12
+        - name: mysqld-exporter
+          image: docker.io/bitnami/mysqld-exporter:0.17.2-debian-12-r7
+        - name: os-shell
+          image: docker.io/bitnami/os-shell:12-debian-12-r43
+      licenses: Apache-2.0
+      tanzuCategory: service
+    apiVersion: v2
+    appVersion: 11.4.5
+    created: "2025-08-22T10:50:56.306232555Z"
+    dependencies:
+    - name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    description: MariaDB is an open source, community-developed SQL database server
+      that is widely in use around the world due to its enterprise features, flexibility,
+      and collaboration with leading tech firms.
+    digest: ca7d2ac993180aed365431a9b1ee7772c6eb26a1fd2d63707f9218ecee07d3d1
+    home: https://bitnami.com
+    icon: https://dyltqmyl993wv.cloudfront.net/assets/stacks/mariadb/img/mariadb-stack-220x234.png
+    keywords:
+    - mariadb
+    - mysql
+    - database
+    - sql
+    - prometheus
+    maintainers:
+    - name: Broadcom, Inc. All Rights Reserved.
+      url: https://github.com/bitnami/charts
+    name: mariadb
+    sources:
+    - https://github.com/bitnami/charts/tree/main/bitnami/mariadb
+    urls:
+    - mariadb-20.5.3.tgz
+    version: 20.5.3
   mariadb-galera:
   - annotations:
       category: Database
@@ -2782,6 +2823,45 @@ entries:
     urls:
     - mariadb-galera-16.0.0.tgz
     version: 16.0.0
+  - annotations:
+      category: Database
+      images: |
+        - name: mariadb-galera
+          image: docker.io/bitnami/mariadb-galera:11.4.6-debian-12-r0
+        - name: mysqld-exporter
+          image: docker.io/bitnami/mysqld-exporter:0.17.2-debian-12-r8
+      licenses: Apache-2.0
+      tanzuCategory: service
+    apiVersion: v2
+    appVersion: 11.4.6
+    created: "2025-08-22T10:50:56.472890209Z"
+    dependencies:
+    - name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    description: MariaDB Galera is a multi-primary database cluster solution for synchronous
+      replication and high availability.
+    digest: 7d9a016dfb9461c988e2081c2da75ed67661b44a01de2c22b6019e9cbc623fae
+    home: https://bitnami.com
+    icon: https://dyltqmyl993wv.cloudfront.net/assets/stacks/mariadb-galera/img/mariadb-galera-stack-220x234.png
+    keywords:
+    - mariadb
+    - mysql
+    - database
+    - sql
+    - prometheus
+    - galera
+    maintainers:
+    - name: Broadcom, Inc. All Rights Reserved.
+      url: https://github.com/bitnami/charts
+    name: mariadb-galera
+    sources:
+    - https://github.com/bitnami/charts/tree/main/bitnami/mariadb-galera
+    urls:
+    - mariadb-galera-14.2.5.tgz
+    version: 14.2.5
   mastodon:
   - annotations:
       category: CMS
@@ -5374,4 +5454,4 @@ entries:
     urls:
     - zookeeper-13.8.7.tgz
     version: 13.8.7
-generated: "2025-08-22T10:49:03.593779333Z"
+generated: "2025-08-22T10:50:56.472937759Z"
