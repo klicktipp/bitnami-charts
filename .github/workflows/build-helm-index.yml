@@ -14,8 +14,9 @@ on:
 permissions:
   contents: write
 
+# Do NOT cancel older runs when a new push arrives
 concurrency:
-  group: build-helm-index
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
