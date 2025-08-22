@@ -4160,6 +4160,48 @@ entries:
     urls:
     - redis-22.0.4.tgz
     version: 22.0.4
+  - annotations:
+      category: Database
+      images: |
+        - name: kubectl
+          image: docker.io/bitnami/kubectl:1.31.0-debian-12-r1
+        - name: os-shell
+          image: docker.io/bitnami/os-shell:12-debian-12-r27
+        - name: redis
+          image: docker.io/bitnami/redis:7.4.0-debian-12-r2
+        - name: redis-exporter
+          image: docker.io/bitnami/redis-exporter:1.62.0-debian-12-r3
+        - name: redis-sentinel
+          image: docker.io/bitnami/redis-sentinel:7.4.0-debian-12-r1
+      licenses: Apache-2.0
+    apiVersion: v2
+    appVersion: 7.4.0
+    created: "2025-08-22T10:20:13.495378223Z"
+    dependencies:
+    - name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    description: Redis(R) is an open source, advanced key-value store. It is often
+      referred to as a data structure server since keys can contain strings, hashes,
+      lists, sets and sorted sets.
+    digest: 9fb9ad0319b5394236a849c56da7cdfc35835acccbce200efa1672889a3af9a8
+    home: https://bitnami.com
+    icon: https://bitnami.com/assets/stacks/redis/img/redis-stack-220x234.png
+    keywords:
+    - redis
+    - keyvalue
+    - database
+    maintainers:
+    - name: Broadcom, Inc. All Rights Reserved.
+      url: https://github.com/bitnami/charts
+    name: redis
+    sources:
+    - https://github.com/bitnami/charts/tree/main/bitnami/redis
+    urls:
+    - redis-20.0.3.tgz
+    version: 20.0.3
   redis-cluster:
   - annotations:
       category: Database
@@ -5094,4 +5136,4 @@ entries:
     urls:
     - zookeeper-13.8.7.tgz
     version: 13.8.7
-generated: "2025-08-22T10:12:44.374139688Z"
+generated: "2025-08-22T10:20:13.495408781Z"
