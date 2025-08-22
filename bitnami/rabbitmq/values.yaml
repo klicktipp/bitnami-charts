@@ -1,4 +1,4 @@
-# Copyright VMware, Inc.
+# Copyright Broadcom, Inc. All Rights Reserved.
 # SPDX-License-Identifier: APACHE-2.0
 
 ## @section Global parameters
@@ -9,7 +9,8 @@
 
 ## @param global.imageRegistry Global Docker image registry
 ## @param global.imagePullSecrets Global Docker registry secret names as an array
-## @param global.storageClass Global StorageClass for Persistent Volume(s)
+## @param global.defaultStorageClass Global default StorageClass for Persistent Volume(s)
+## @param global.storageClass DEPRECATED: use global.defaultStorageClass instead
 ##
 global:
   imageRegistry: ""
@@ -18,7 +19,22 @@ global:
   ##   - myRegistryKeySecretName
   ##
   imagePullSecrets: []
+  defaultStorageClass: ""
   storageClass: ""
+  ## Security parameters
+  ##
+  security:
+    ## @param global.security.allowInsecureImages Allows skipping image verification
+    allowInsecureImages: false
+  ## Compatibility adaptations for Kubernetes platforms
+  ##
+  compatibility:
+    ## Compatibility adaptations for Openshift
+    ##
+    openshift:
+      ## @param global.compatibility.openshift.adaptSecurityContext Adapt the securityContext sections of the deployment to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation)
+      ##
+      adaptSecurityContext: auto
 ## @section RabbitMQ Image parameters
 ## Bitnami RabbitMQ image version
 ## ref: https://hub.docker.com/r/bitnami/rabbitmq/tags/
@@ -33,14 +49,13 @@ global:
 image:
   registry: docker.io
   repository: bitnami/rabbitmq
-  tag: 3.12.12-debian-11-r7
+  tag: 4.1.3-debian-12-r1
   digest: ""
   ## set to true if you would like to see extra information on logs
   ## It turns BASH and/or NAMI debugging in the image
   ##
   debug: false
   ## Specify a imagePullPolicy
-  ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
   ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
   ##
   pullPolicy: IfNotPresent
@@ -92,6 +107,9 @@ serviceBindings:
 ## If you experience slow pod startups or slow running of the scripts you probably want to set this to `false`.
 ##
 enableServiceLinks: true
+## @param usePasswordFiles Mount credentials as files instead of using environment variables
+##
+usePasswordFiles: true
 ## Enable diagnostic mode in the deployment
 ##
 diagnosticMode:
@@ -143,6 +161,10 @@ auth:
   ## ref: https://github.com/bitnami/containers/tree/main/bitnami/rabbitmq#environment-variables
   ##
   securePassword: true
+  ## @param auth.updatePassword Update RabbitMQ password on secret change
+  ## ref: https://github.com/bitnami/containers/tree/main/bitnami/rabbitmq#environment-variables
+  ##
+  updatePassword: false
   ## @param auth.existingPasswordSecret Existing secret with RabbitMQ credentials (existing secret must contain a value for `rabbitmq-password` key or override with setting auth.existingSecretPasswordKey)
   ## e.g:
   ## existingPasswordSecret: name-of-existing-secret
@@ -209,7 +231,7 @@ logs: "-"
 ## ref: https://github.com/bitnami/containers/tree/main/bitnami/rabbitmq#environment-variables
 ## ref: https://www.rabbitmq.com/install-debian.html#kernel-resource-limits
 ##
-ulimitNofiles: "65536"
+ulimitNofiles: "65535"
 ## RabbitMQ maximum available scheduler threads and online scheduler threads. By default it will create a thread per CPU detected, with the following parameters you can tune it manually.
 ## ref: https://hamidreza-s.github.io/erlang/scheduling/real-time/preemptive/migration/2016/02/09/erlang-scheduler-details.html#scheduler-threads
 ## ref: https://github.com/bitnami/charts/issues/2189
@@ -232,13 +254,18 @@ memoryHighWatermark:
   ## Memory high watermark value.
   ## @param memoryHighWatermark.value Memory high watermark value
   ## The default value of 0.4 stands for 40% of available RAM
-  ## Note: the memory relative limit is applied to the resource.limits.memory to calculate the memory threshold
-  ## You can also use an absolute value, e.g.: 256MB
+  ## Note: the memory relative limit is applied to the resourcesPreset memory limit or the resource.limits.memory to calculate the memory threshold
+  ## You can also use an absolute value, e.g.: 256Mi
   ##
   value: 0.4
 ## @param plugins List of default plugins to enable (should only be altered to remove defaults; for additional plugins use `extraPlugins`)
 ##
 plugins: "rabbitmq_management rabbitmq_peer_discovery_k8s"
+
+## @param queue_master_locator Changes the queue_master_locator setting in the rabbitmq config file
+##
+queue_master_locator: min-masters
+
 ## @param communityPlugins List of Community plugins (URLs) to be downloaded during container initialization
 ## Combine it with extraPlugins to also enable them.
 ##
@@ -328,6 +355,18 @@ containerPorts:
   manager: 15672
   epmd: 4369
   metrics: 9419
+## Host Ports
+## @param hostPorts.amqp
+## @param hostPorts.amqpTls
+## @param hostPorts.manager
+## @param hostPorts.metrics
+##
+hostPorts:
+  amqp: ""
+  amqpTls: ""
+  manager: ""
+  metrics: ""
+
 ## @param initScripts Dictionary of init scripts. Evaluated as a template.
 ## Specify dictionary of scripts to be run at first boot
 ## Alternatively, you can put your scripts under the files/docker-entrypoint-initdb.d directory
@@ -361,6 +400,9 @@ extraContainerPorts: []
 ## See : https://www.rabbitmq.com/networking.html for additional information
 ##
 tcpListenOptions:
+  ## @param tcpListenOptions.enabled Enable TCP listen options of RabbitMQ
+  ##
+  enabled: true
   ## @param tcpListenOptions.backlog Maximum size of the unaccepted TCP connections queue
   ##
   backlog: 128
@@ -406,7 +448,7 @@ configuration: |-
   load_definitions = {{ .Values.loadDefinition.file }}
   {{- end }}
   # queue master locator
-  queue_master_locator = min-masters
+  queue_master_locator = {{ .Values.queue_master_locator }}
   # enable loopback user
   {{- if not (empty .Values.auth.username) }}
   loopback_users.{{ .Values.auth.username }} = {{ .Values.auth.enableLoopbackUser }}
@@ -422,7 +464,7 @@ configuration: |-
   ssl_options.certfile = /opt/bitnami/rabbitmq/certs/server_certificate.pem
   ssl_options.keyfile = /opt/bitnami/rabbitmq/certs/server_key.pem
   {{- if .Values.auth.tls.sslOptionsPassword.enabled }}
-  ssl_options.password = {{ template "rabbitmq.tlsSslOptionsPassword" . }}
+  ssl_options.password = {{ include "common.secrets.passwords.manage" (dict "secret" .Values.auth.tls.sslOptionsPassword.existingSecret "key" .Values.auth.tls.sslOptionsPassword.key "providedValues" (list "auth.tls.sslOptionsPassword.password") "skipB64enc" true "failOnNew" false "context" $) }}
   {{- end }}
   {{- end }}
   {{- if .Values.ldap.enabled }}
@@ -473,20 +515,22 @@ configuration: |-
   {{- end }}
   {{- end }}
   {{- end }}
-  {{- if .Values.metrics.enabled }}
   ## Prometheus metrics
   ##
   prometheus.tcp.port = {{ .Values.containerPorts.metrics }}
-  {{- end }}
   {{- if .Values.memoryHighWatermark.enabled }}
   ## Memory Threshold
   ##
-  total_memory_available_override_value = {{ include "rabbitmq.toBytes" .Values.resources.limits.memory }}
+  {{- if (dig "limits" "memory" "" .Values.resources) }}
+  total_memory_available_override_value = {{ include "rabbitmq.toBytes" (dig "limits" "memory" "" .Values.resources) }}
+  {{- end }}
   {{- if (eq .Values.memoryHighWatermark.type "absolute") }}
   vm_memory_high_watermark.{{ .Values.memoryHighWatermark.type }} = {{ include "rabbitmq.toBytes" .Values.memoryHighWatermark.value }}
   {{- else if (eq .Values.memoryHighWatermark.type "relative") }}
   vm_memory_high_watermark.{{ .Values.memoryHighWatermark.type }} = {{ .Values.memoryHighWatermark.value }}
   {{- end }}
+  {{- end }}
+  {{- if .Values.tcpListenOptions.enabled }}
   ## TCP Listen Options
   ##
   tcp_listen_options.backlog = {{ .Values.tcpListenOptions.backlog }}
@@ -569,7 +613,7 @@ ldap:
   ##
   basedn: ""
   ## @param ldap.uidField Field used to match with the user name (uid, samAccountName, cn, etc). It matches with 'dn_lookup_attribute' in RabbitMQ configuration
-  ##��ref: https://www.rabbitmq.com/ldap.html#usernames-and-dns
+  ## ref: https://www.rabbitmq.com/ldap.html#usernames-and-dns
   ##
   ## @param ldap.uidField Field used to match with the user name (uid, samAccountName, cn, etc). It matches with 'dn_lookup_attribute' in RabbitMQ configuration
   ##
@@ -738,8 +782,10 @@ podSecurityContext:
 ## @param containerSecurityContext.enabled Enabled RabbitMQ containers' Security Context
 ## @param containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
 ## @param containerSecurityContext.runAsUser Set RabbitMQ containers' Security Context runAsUser
+## @param containerSecurityContext.runAsGroup Set RabbitMQ containers' Security Context runAsGroup
 ## @param containerSecurityContext.runAsNonRoot Set RabbitMQ container's Security Context runAsNonRoot
 ## @param containerSecurityContext.allowPrivilegeEscalation Set container's privilege escalation
+## @param containerSecurityContext.readOnlyRootFilesystem Set container's Security Context readOnlyRootFilesystem
 ## @param containerSecurityContext.capabilities.drop Set container's Security Context runAsNonRoot
 ## @param containerSecurityContext.seccompProfile.type Set container's Security Context seccomp profile
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
@@ -751,10 +797,12 @@ podSecurityContext:
 ##
 containerSecurityContext:
   enabled: true
-  seLinuxOptions: null
+  seLinuxOptions: {}
   runAsUser: 1001
+  runAsGroup: 1001
   runAsNonRoot: true
   allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
   capabilities:
     drop: ["ALL"]
   seccompProfile:
@@ -765,10 +813,10 @@ containerSecurityContext:
 ## choice for the user. This also increases chances charts run on environments with little
 ## resources, such as Minikube. If you do want to specify resources, uncomment the following
 ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if resources is set (resources is recommended for production).
+## @param resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if resources is set (resources is recommended for production).
 ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
 ##
-resourcesPreset: "none"
+resourcesPreset: "micro"
 ## @param resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
 ## Example:
 ## resources:
@@ -866,11 +914,11 @@ sidecars: []
 pdb:
   ## @param pdb.create Enable/disable a Pod Disruption Budget creation
   ##
-  create: false
+  create: true
   ## @param pdb.minAvailable Minimum number/percentage of pods that should remain scheduled
   ##
-  minAvailable: 1
-  ## @param pdb.maxUnavailable Maximum number/percentage of pods that may be made unavailable
+  minAvailable: ""
+  ## @param pdb.maxUnavailable Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `pdb.minAvailable` and `pdb.maxUnavailable` are empty.
   ##
   maxUnavailable: ""
 ## @section RBAC parameters
@@ -902,6 +950,18 @@ rbac:
   ## that allows RabbitMQ pods querying the K8s API
   ##
   create: true
+  ## @param rbac.rules Custom RBAC rules
+  ## Example:
+  ## rules:
+  ##   - apiGroups:
+  ##       - ""
+  ##     resources:
+  ##       - pods
+  ##     verbs:
+  ##       - get
+  ##       - list
+  ##
+  rules: []
 ## @section Persistence parameters
 ##
 persistence:
@@ -934,7 +994,7 @@ persistence:
   ## @param persistence.mountPath The path the volume will be mounted at
   ## Note: useful when using custom RabbitMQ images
   ##
-  mountPath: /bitnami/rabbitmq/mnesia
+  mountPath: /opt/bitnami/rabbitmq/.rabbitmq/mnesia
   ## @param persistence.subPath The subdirectory of the volume to mount to
   ## Useful in dev environments and one PV for multiple services
   ##
@@ -1042,6 +1102,14 @@ service:
   ##   targetPort: 1234
   ##
   extraPorts: []
+  ## @param service.extraPortsHeadless Extra ports to expose in the headless service
+  ## E.g.:
+  ## extraPortsHeadless:
+  ## - name: new_svc_name
+  ##   port: 1234
+  ##   targetPort: 1234
+  ##
+  extraPortsHeadless: []
   ## @param service.loadBalancerSourceRanges Address(es) that are allowed when service is `LoadBalancer`
   ## https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
   ## e.g:
@@ -1104,6 +1172,10 @@ service:
   ##     timeoutSeconds: 300
   ##
   sessionAffinityConfig: {}
+  ## @param service.trafficDistribution Traffic Distribution provides another
+  ## way to influence traffic routing within a Kubernetes Service.
+  ##
+  trafficDistribution: "PreferClose"
 ## Configure the ingress resource that allows you to access the
 ## RabbitMQ installation. Set up the URL
 ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/
@@ -1223,7 +1295,10 @@ networkPolicy:
   ## @param networkPolicy.allowExternalEgress Allow the pod to access any range of port and all destinations.
   ##
   allowExternalEgress: true
-  ## @param networkPolicy.extraIngress [array] Add extra ingress rules to the NetworkPolice
+  ## @param networkPolicy.addExternalClientAccess Allow access from pods with client label set to "true". Ignored if `networkPolicy.allowExternal` is true.
+  ##
+  addExternalClientAccess: true
+  ## @param networkPolicy.extraIngress [array] Add extra ingress rules to the NetworkPolicy
   ## e.g:
   ## extraIngress:
   ##   - ports:
@@ -1256,8 +1331,14 @@ networkPolicy:
   ##                   - frontend
   ##
   extraEgress: []
-  ## @param networkPolicy.ingressNSMatchLabels [object] Labels to match to allow traffic from other namespaces
-  ## @param networkPolicy.ingressNSPodMatchLabels [object] Pod labels to match to allow traffic from other namespaces
+  ## @param networkPolicy.ingressPodMatchLabels [object] Labels to match to allow traffic from other pods. Ignored if `networkPolicy.allowExternal` is true.
+  ## e.g:
+  ## ingressPodMatchLabels:
+  ##   my-client: "true"
+  #
+  ingressPodMatchLabels: {}
+  ## @param networkPolicy.ingressNSMatchLabels [object] Labels to match to allow traffic from other namespaces. Ignored if `networkPolicy.allowExternal` is true.
+  ## @param networkPolicy.ingressNSPodMatchLabels [object] Pod labels to match to allow traffic from other namespaces. Ignored if `networkPolicy.allowExternal` is true.
   ##
   ingressNSMatchLabels: {}
   ingressNSPodMatchLabels: {}
@@ -1284,32 +1365,12 @@ metrics:
   ## ref: https://github.com/coreos/prometheus-operator
   ##
   serviceMonitor:
-    ## @param metrics.serviceMonitor.enabled Create ServiceMonitor Resource for scraping metrics using PrometheusOperator
-    ##
-    enabled: false
     ## @param metrics.serviceMonitor.namespace Specify the namespace in which the serviceMonitor resource will be created
     ##
     namespace: ""
-    ## @param metrics.serviceMonitor.interval Specify the interval at which metrics should be scraped
-    ##
-    interval: 30s
-    ## @param metrics.serviceMonitor.scrapeTimeout Specify the timeout after which the scrape is ended
-    ## e.g:
-    ## scrapeTimeout: 30s
-    ##
-    scrapeTimeout: ""
     ## @param metrics.serviceMonitor.jobLabel The name of the label on the target service to use as the job name in prometheus.
     ##
     jobLabel: ""
-    ## @param metrics.serviceMonitor.relabelings RelabelConfigs to apply to samples before scraping.
-    ##
-    relabelings: []
-    ## @param metrics.serviceMonitor.metricRelabelings MetricsRelabelConfigs to apply to samples before ingestion.
-    ##
-    metricRelabelings: []
-    ## @param metrics.serviceMonitor.honorLabels honorLabels chooses the metric's labels on collisions with target labels
-    ##
-    honorLabels: false
     ## @param metrics.serviceMonitor.targetLabels Used to keep given service's labels in target
     ## e.g:
     ## - app.kubernetes.io/name
@@ -1320,13 +1381,6 @@ metrics:
     ## - app.kubernetes.io/name
     ##
     podTargetLabels: {}
-    ## @param metrics.serviceMonitor.path Define the path used by ServiceMonitor to scrap metrics
-    ## Could be /metrics for aggregated metrics or /metrics/per-object for more details
-    ##
-    path: ""
-    ## @param metrics.serviceMonitor.params Define the HTTP URL parameters used by ServiceMonitor
-    ##
-    params: {}
     ## @param metrics.serviceMonitor.selector ServiceMonitor selector labels
     ## ref: https://github.com/bitnami/charts/tree/main/bitnami/prometheus-operator#prometheus-configuration
     ##
@@ -1340,6 +1394,112 @@ metrics:
     ## @param metrics.serviceMonitor.annotations Extra annotations for the ServiceMonitor
     ##
     annotations: {}
+    ## Scrape metrics from the `/metrics` endpoint
+    ## ref: https://www.rabbitmq.com/docs/prometheus#default-endpoint
+    ##
+    default:
+      ## @param metrics.serviceMonitor.default.enabled Enable default metrics endpoint (`GET /metrics`) to be scraped by the ServiceMonitor
+      ##
+      enabled: false
+      ## @param metrics.serviceMonitor.default.interval Specify the interval at which metrics should be scraped
+      ##
+      interval: 30s
+      ## @param metrics.serviceMonitor.default.scrapeTimeout Specify the timeout after which the scrape is ended
+      ## e.g:
+      ## scrapeTimeout: 30s
+      ##
+      scrapeTimeout: ""
+      ## @param metrics.serviceMonitor.default.relabelings RelabelConfigs to apply to samples before scraping.
+      ##
+      relabelings: [ ]
+      ## @param metrics.serviceMonitor.default.metricRelabelings MetricsRelabelConfigs to apply to samples before ingestion.
+      ##
+      metricRelabelings: [ ]
+      ## @param metrics.serviceMonitor.default.honorLabels honorLabels chooses the metric's labels on collisions with target labels
+      ##
+      honorLabels: false
+    ## Scrape metrics from the `/metrics/per-object` endpoint
+    ## ref: https://www.rabbitmq.com/docs/prometheus#per-object-endpoint
+    ##
+    perObject:
+      ## @param metrics.serviceMonitor.perObject.enabled Enable per-object metrics endpoint (`GET /metrics/per-object`) to be scraped by the ServiceMonitor
+      ##
+      enabled: false
+      ## @param metrics.serviceMonitor.perObject.interval Specify the interval at which metrics should be scraped
+      ##
+      interval: 30s
+      ## @param metrics.serviceMonitor.perObject.scrapeTimeout Specify the timeout after which the scrape is ended
+      ## e.g:
+      ## scrapeTimeout: 30s
+      ##
+      scrapeTimeout: ""
+      ## @param metrics.serviceMonitor.perObject.relabelings RelabelConfigs to apply to samples before scraping.
+      ##
+      relabelings: [ ]
+      ## @param metrics.serviceMonitor.perObject.metricRelabelings MetricsRelabelConfigs to apply to samples before ingestion.
+      ##
+      metricRelabelings: [ ]
+      ## @param metrics.serviceMonitor.perObject.honorLabels honorLabels chooses the metric's labels on collisions with target labels
+      ##
+      honorLabels: false
+    ## Scrape metrics from the `/metrics/detailed` endpoint
+    ## ref: https://www.rabbitmq.com/docs/prometheus#detailed-endpoint
+    ##
+    detailed:
+      ## @param metrics.serviceMonitor.detailed.enabled Enable detailed metrics endpoint (`GET /metrics/detailed`) to be scraped by the ServiceMonitor
+      ##
+      enabled: false
+      ## @param metrics.serviceMonitor.detailed.family List of metric families to get
+      ## e.g.
+      ## family: ["queue_coarse_metrics", "queue_consumer_count"]
+      ##
+      family: []
+      ## @param metrics.serviceMonitor.detailed.vhost Filter metrics to only show for the specified vhosts
+      ##
+      vhost: []
+      ## @param metrics.serviceMonitor.detailed.interval Specify the interval at which metrics should be scraped
+      ##
+      interval: 30s
+      ## @param metrics.serviceMonitor.detailed.scrapeTimeout Specify the timeout after which the scrape is ended
+      ## e.g:
+      ## scrapeTimeout: 30s
+      ##
+      scrapeTimeout: ""
+      ## @param metrics.serviceMonitor.detailed.relabelings RelabelConfigs to apply to samples before scraping.
+      ##
+      relabelings: [ ]
+      ## @param metrics.serviceMonitor.detailed.metricRelabelings MetricsRelabelConfigs to apply to samples before ingestion.
+      ##
+      metricRelabelings: [ ]
+      ## @param metrics.serviceMonitor.detailed.honorLabels honorLabels chooses the metric's labels on collisions with target labels
+      ##
+      honorLabels: false
+
+    ## @param metrics.serviceMonitor.enabled Deprecated. Please use `metrics.serviceMonitor.{default/perObject/detailed}` instead.
+    ##
+    enabled: false
+    ## @param metrics.serviceMonitor.interval Deprecated. Please use `metrics.serviceMonitor.{default/perObject/detailed}` instead.
+    ##
+    interval: 30s
+    ## @param metrics.serviceMonitor.scrapeTimeout Deprecated. Please use `metrics.serviceMonitor.{default/perObject/detailed}` instead.
+    ##
+    scrapeTimeout: ""
+    ## @param metrics.serviceMonitor.relabelings Deprecated. Please use `metrics.serviceMonitor.{default/perObject/detailed}` instead.
+    ##
+    relabelings: [ ]
+    ## @param metrics.serviceMonitor.metricRelabelings Deprecated. Please use `metrics.serviceMonitor.{default/perObject/detailed}` instead.
+    ##
+    metricRelabelings: [ ]
+    ## @param metrics.serviceMonitor.honorLabels Deprecated. Please use `metrics.serviceMonitor.{default/perObject/detailed}` instead.
+    ##
+    honorLabels: false
+    ## @param metrics.serviceMonitor.path Deprecated. Please use `metrics.serviceMonitor.{default/perObject/detailed}` instead.
+    ##
+    path: ""
+    ## @param metrics.serviceMonitor.params Deprecated. Please use `metrics.serviceMonitor.{default/perObject/detailed}` instead.
+    ##
+    params: { }
+
   ## Custom PrometheusRule to be defined
   ## The value is evaluated as a template, so, for example, the value can depend on .Release or .Chart
   ## ref: https://github.com/coreos/prometheus-operator#customresourcedefinitions
@@ -1434,10 +1594,9 @@ volumePermissions:
   image:
     registry: docker.io
     repository: bitnami/os-shell
-    tag: 11-debian-11-r96
+    tag: 12-debian-12-r50
     digest: ""
     ## Specify a imagePullPolicy
-    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
     ## ref: https://kubernetes.io/docs/concepts/containers/images/#pre-pulled-images
     ##
     pullPolicy: IfNotPresent
@@ -1454,10 +1613,10 @@ volumePermissions:
   ## choice for the user. This also increases chances charts run on environments with little
   ## resources, such as Minikube. If you do want to specify resources, uncomment the following
   ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  ## @param volumePermissions.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if volumePermissions.resources is set (volumePermissions.resources is recommended for production).
+  ## @param volumePermissions.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if volumePermissions.resources is set (volumePermissions.resources is recommended for production).
   ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
   ##
-  resourcesPreset: "none"
+  resourcesPreset: "nano"
   ## @param volumePermissions.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
   ## Example:
   ## resources:
@@ -1476,5 +1635,5 @@ volumePermissions:
   ## @param volumePermissions.containerSecurityContext.runAsUser User ID for the init container
   ##
   containerSecurityContext:
-    seLinuxOptions: null
+    seLinuxOptions: {}
     runAsUser: 0
