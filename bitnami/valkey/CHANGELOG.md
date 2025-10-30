@@ -1,8 +1,21 @@
 # Changelog
 
-## 3.0.30 (2025-08-14)
+## 4.0.2 (2025-10-22)
 
-* [bitnami/valkey] :zap: :arrow_up: Update dependency references ([#35859](https://github.com/bitnami/charts/pull/35859))
+* [bitnami/valkey] fix: adjust statefullset valkey container port to the headless service port ([#36363](https://github.com/bitnami/charts/pull/36363))
+
+## <small>4.0.1 (2025-09-04)</small>
+
+* [bitnami/*] Remove annotations.category (#36224) ([2abc0f9](https://github.com/bitnami/charts/commit/2abc0f9d7e89a5453e57f029c66f581b3d5855ef)), closes [#36224](https://github.com/bitnami/charts/issues/36224)
+* [bitnami/valkey] doc: fix default value in README (#35741) ([0b16d82](https://github.com/bitnami/charts/commit/0b16d82f0d3816c42e8490a4c4fc7c4faf8ed1d1)), closes [#35741](https://github.com/bitnami/charts/issues/35741)
+
+## <small>3.0.31 (2025-08-23)</small>
+
+* [bitnami/valkey] :zap: :arrow_up: Update dependency references (#36174) ([bfa74fb](https://github.com/bitnami/charts/commit/bfa74fb5cb43be45e0238a6fc4db88ae4dad4f78)), closes [#36174](https://github.com/bitnami/charts/issues/36174)
+
+## <small>3.0.30 (2025-08-14)</small>
+
+* [bitnami/valkey] :zap: :arrow_up: Update dependency references (#35859) ([7d00ea2](https://github.com/bitnami/charts/commit/7d00ea291c92e2055652c2c20fb3f0e80ceb5c54)), closes [#35859](https://github.com/bitnami/charts/issues/35859)
 
 ## <small>3.0.29 (2025-08-13)</small>
 
